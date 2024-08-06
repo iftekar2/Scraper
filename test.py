@@ -109,7 +109,7 @@ def get_page(playwright, from_place, to_place, departure_date, return_date, trip
                 # Capture the dynamically generated URL for the return flight page
                 return_flight_url = page.url  # Capture the dynamically generated URL
 
-                print(f"Return flight URL: {return_flight_url}")  # Optional: For debugging
+                # print(f"Return flight URL: {return_flight_url}")  # Optional: For debugging
 
                 # Parse the return flight data
                 parser_return = LexborHTMLParser(page.content())
@@ -238,11 +238,25 @@ def scrape_google_flights(parser, parser_return=None):
                 price = return_result.css_first('.U3gSDe .FpEdX span').text() # This is getting the price
                 price_type = return_result.css_first('.U3gSDe .N872Rd').text() if return_result.css_first('.U3gSDe .N872Rd') else None # This is getting different price types if it is available
 
+
+
+
+                # Assuming return_result represents a flight result element from which we are extracting data
+
+                # This is getting the container div for the airline info
+                airline_container = return_result.css_first('.sSHqwe.tPgKwe.ogfYpf')
+
+                # This is getting the last span element inside the container, which contains the airline names
+                last_span_element = airline_container.css('span')[-1]
+
+                # Extracting the text content from the span element
+                airline_names = last_span_element.text().strip()
+
                 # This is going to hold flight data
                 return_flight_data = {
                     'departure_date': departure_date,
                     'arrival_date': arrival_date,
-                    'company': company,
+                    'company': airline_names,  # Use the extracted airline names
                     'duration': duration,
                     'stops': stops,
                     'emissions': emissions,
@@ -250,6 +264,9 @@ def scrape_google_flights(parser, parser_return=None):
                     'price': price,
                     'price_type': price_type
                 }
+
+
+
 
                 # This is getting airport information
                 airports = return_result.css_first('.Ak5kof .sSHqwe')
