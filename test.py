@@ -156,11 +156,32 @@ def scrape_google_flights(parser, parser_return=None):
             price = result.css_first('.U3gSDe .FpEdX span').text() # This is getting the price
             price_type = result.css_first('.U3gSDe .N872Rd').text() if result.css_first('.U3gSDe .N872Rd') else None # This is getting different price types if it is available
 
+        # Assuming return_result represents a flight result element from which we are extracting data
+
+            # This is getting the container div for the airline info
+            airline_container = result.css_first('.sSHqwe.tPgKwe.ogfYpf')
+
+            # Initialize an empty list to store airline names
+            airline_names = []
+
+            # This is iterating through each span element inside the container
+            for span in airline_container.css('span'):
+                # Extract the text content from the span element
+                span_text = span.text().strip()
+                
+                # Filter out unwanted text
+                if 'Operated by' not in span_text and not span.attrs:
+                    # Add the valid airline name to the list
+                    airline_names.append(span_text)
+
+            # Join all collected airline names with a comma
+            airline_names_str = ', '.join(airline_names)
+
             # This is going to hold flight data
             flight_data = {
                 'departure_date': departure_date,
                 'arrival_date': arrival_date,
-                'company': company,
+                'company': airline_names_str,  # Use the extracted airline names
                 'duration': duration,
                 'stops': stops,
                 'emissions': emissions,
@@ -238,9 +259,6 @@ def scrape_google_flights(parser, parser_return=None):
                 price = return_result.css_first('.U3gSDe .FpEdX span').text() # This is getting the price
                 price_type = return_result.css_first('.U3gSDe .N872Rd').text() if return_result.css_first('.U3gSDe .N872Rd') else None # This is getting different price types if it is available
 
-
-
-
                 # Assuming return_result represents a flight result element from which we are extracting data
 
                 # This is getting the container div for the airline info
@@ -264,9 +282,6 @@ def scrape_google_flights(parser, parser_return=None):
                     'price': price,
                     'price_type': price_type
                 }
-
-
-
 
                 # This is getting airport information
                 airports = return_result.css_first('.Ak5kof .sSHqwe')
