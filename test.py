@@ -644,7 +644,7 @@
 
 
 
-from playwright.sync_api import sync_playwright
+# from playwright.sync_api import sync_playwright
 # from selectolax.lexbor import LexborHTMLParser
 # import json
 # import time
@@ -1006,141 +1006,290 @@ import time
 
 # Function to enter user input into Google Flights and scrape flights data
 def get_page(playwright, from_place, to_place, departure_date, return_date, trip_type, seat_type):
-    browser = playwright.chromium.launch(headless=False)
-    page = browser.new_page()
-    page.goto('https://www.google.com/travel/flights/search?tfs=CBwQAhokEgoyMDI0LTA4LTE0ag0IAhIJL20vMDJfMjg2cgcIARIDTEFYGiQSCjIwMjQtMDgtMzFqBwgBEgNMQVhyDQgCEgkvbS8wMl8yODZAAUgBcAGCAQsI____________AZgBAQ&hl=en-US&gl=US')
+    try: 
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
+        page.goto('https://www.google.com/travel/flights/search?tfs=CBwQAhokEgoyMDI0LTA4LTE0ag0IAhIJL20vMDJfMjg2cgcIARIDTEFYGiQSCjIwMjQtMDgtMzFqBwgBEgNMQVhyDQgCEgkvbS8wMl8yODZAAUgBcAGCAQsI____________AZgBAQ&hl=en-US&gl=US')
 
-    # Select trip type (Round Trip or One Way)
-    trip_type_menu = page.query_selector('.VfPpkd-aPP78e')
-    if trip_type_menu:
-        trip_type_menu.click()
-        time.sleep(1)
-        trip_type_options = page.query_selector_all('li[role="option"]')
-        for option in trip_type_options:
-            option_text = option.query_selector('.VfPpkd-rymPhb-fpDzbe-fmcmS').text_content()
-            if trip_type.lower() in option_text.lower():
-                option.click()
-                break
-        time.sleep(1)
-    else:
-        print("Trip type menu not found")
-
-    # Select seat type (Economy, Business, First class)
-    seat_type_menu = page.query_selector('.JQrP8b')
-    if seat_type_menu:
-        seat_type_menu.click()
-        time.sleep(1)
-        seat_type_options = page.query_selector_all('li[role="option"]')
-        for option in seat_type_options:
-            option_text = option.query_selector('.VfPpkd-rymPhb-fpDzbe-fmcmS').text_content()
-            if seat_type.lower() in option_text.lower():
-                option.click()
-                break
-        time.sleep(1)
-    else:
-        print("Seat type menu not found")
-
-    # Enter "From" location
-    from_place_field = page.query_selector_all('.e5F5td')[0]
-    from_place_field.click()
-    time.sleep(1)
-    from_place_field.type(from_place)
-    time.sleep(1)
-    page.keyboard.press('Enter')
-
-    # Enter "To" location
-    to_place_field = page.query_selector_all('.e5F5td')[1]
-    to_place_field.click()
-    time.sleep(1)
-    to_place_field.type(to_place)
-    time.sleep(1)
-    page.keyboard.press('Enter')
-
-    # Enter departure date
-    departure_date_field = page.query_selector('[aria-label="Departure"]')
-    if departure_date_field:
-        departure_date_field.click()
-        time.sleep(1)
-        page.keyboard.type(departure_date)
-        time.sleep(1)
-        page.keyboard.press('Tab')  # Move to the return date field if round trip
-    else:
-        print("Departure date field not found")
-
-    if trip_type.lower() == 'round trip':
-        # Enter return date
-        time.sleep(1)
-        page.keyboard.type(return_date)
-        time.sleep(1)
-
-        # Click done button
-        done_button = page.query_selector('button[jsname="McfNlf"][aria-label^="Done"]')
-        if done_button:
-            done_button.click()
+        # Select trip type (Round Trip or One Way)
+        trip_type_menu = page.query_selector('.VfPpkd-aPP78e')
+        if trip_type_menu:
+            trip_type_menu.click()
+            time.sleep(1)
+            trip_type_options = page.query_selector_all('li[role="option"]')
+            for option in trip_type_options:
+                option_text = option.query_selector('.VfPpkd-rymPhb-fpDzbe-fmcmS').text_content()
+                if trip_type.lower() in option_text.lower():
+                    option.click()
+                    break
+            time.sleep(1)
         else:
-            print("Done button not found")
+            print("Trip type menu not found")
 
-    time.sleep(2)  # Wait for the date picker to close
-
-    time.sleep(5)  # Wait for results to load
-
-    for _ in range(3):
-        page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-        time.sleep(2)
-
-    parser_departing = LexborHTMLParser(page.content())
-    all_departing_flights_data = scrape_google_flights(parser_departing)
-
-    # Get all departing flight elements
-    departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
-
-    max_flights_to_scrape = 5  # Set the desired limit here
-    all_flight_data = []
-
-    # Scrape the initial URL to navigate back to this page later
-    initial_url = page.url
-
-    # Determine the key for departing flights in the scraped data
-    departing_key = next(iter(all_departing_flights_data.keys()))
-
-    # Determine the number of flights to actually scrape
-    num_flights_to_scrape = min(len(departing_flights), len(all_departing_flights_data[departing_key]), max_flights_to_scrape)
-
-    for index in range(num_flights_to_scrape):
-        # Get the departing flight data for this index
-        departing_flight_data = all_departing_flights_data[departing_key][index]
-
-        # Check if the corresponding element still exists
-        if index < len(departing_flights):
-            # Click on the departing flight
-            departing_flights[index].click()
-            time.sleep(5)
-
-            # Scrape return flights after selecting a departing flight
-            parser_return = LexborHTMLParser(page.content())
-            return_flight_data = scrape_google_flights(parser_return)
-            
-            # Combine departing and return flight data
-            combined_data = {
-                'departing_flight': departing_flight_data,
-                'return_flights': return_flight_data,
-                'departing_flight_index': index
-            }
-            
-            all_flight_data.append(combined_data)
-
-            # Navigate back to the initial departing flights list
-            page.goto(initial_url)
-            time.sleep(5)
-
-            # Re-select all departing flights without re-scraping
-            departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+        # Select seat type (Economy, Business, First class)
+        seat_type_menu = page.query_selector('.JQrP8b')
+        if seat_type_menu:
+            seat_type_menu.click()
+            time.sleep(1)
+            seat_type_options = page.query_selector_all('li[role="option"]')
+            for option in seat_type_options:
+                option_text = option.query_selector('.VfPpkd-rymPhb-fpDzbe-fmcmS').text_content()
+                if seat_type.lower() in option_text.lower():
+                    option.click()
+                    break
+            time.sleep(1)
         else:
-            print(f"Warning: Flight element at index {index} no longer exists on the page.")
+            print("Seat type menu not found")
 
-    # Close browser after processing all flights
-    browser.close()
-    return all_flight_data
+        # Enter "From" location
+        from_place_field = page.query_selector_all('.e5F5td')[0]
+        from_place_field.click()
+        time.sleep(1)
+        from_place_field.type(from_place)
+        time.sleep(1)
+        page.keyboard.press('Enter')
+
+        # Enter "To" location
+        to_place_field = page.query_selector_all('.e5F5td')[1]
+        to_place_field.click()
+        time.sleep(1)
+        to_place_field.type(to_place)
+        time.sleep(1)
+        page.keyboard.press('Enter')
+
+        # Enter departure date
+        departure_date_field = page.query_selector('[aria-label="Departure"]')
+        if departure_date_field:
+            departure_date_field.click()
+            time.sleep(1)
+            page.keyboard.type(departure_date)
+            time.sleep(1)
+            page.keyboard.press('Tab')  # Move to the return date field if round trip
+        else:
+            print("Departure date field not found")
+
+        if trip_type.lower() == 'round trip':
+            # Enter return date
+            time.sleep(1)
+            page.keyboard.type(return_date)
+            time.sleep(1)
+
+            # Click done button
+            done_button = page.query_selector('button[jsname="McfNlf"][aria-label^="Done"]')
+            if done_button:
+                done_button.click()
+            else:
+                print("Done button not found")
+
+        time.sleep(2)  # Wait for the date picker to close
+
+        time.sleep(5)  # Wait for results to load
+
+
+        # parser_departing = LexborHTMLParser(page.content())
+        # all_departing_flights_data = scrape_google_flights(parser_departing)
+
+        # # Get all departing flight elements
+        # departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+
+        # max_flights_to_scrape = 5  # Set the desired limit here
+        # all_flight_data = []
+
+        # # Scrape the initial URL to navigate back to this page later
+        # initial_url = page.url
+
+        # # Determine the key for departing flights in the scraped data
+        # departing_key = next(iter(all_departing_flights_data.keys()))
+
+        # # Determine the number of flights to actually scrape
+        # num_flights_to_scrape = min(len(departing_flights), len(all_departing_flights_data[departing_key]), max_flights_to_scrape)
+
+        # for index in range(num_flights_to_scrape):
+        #     # Get the departing flight data for this index
+        #     departing_flight_data = all_departing_flights_data[departing_key][index]
+
+        #     # Check if the corresponding element still exists
+        #     if index < len(departing_flights):
+        #         # Click on the departing flight
+        #         departing_flights[index].click()
+        #         time.sleep(5)
+
+        #         # Scrape return flights after selecting a departing flight
+        #         parser_return = LexborHTMLParser(page.content())
+        #         return_flight_data = scrape_google_flights(parser_return)
+                
+        #         # Combine departing and return flight data
+        #         combined_data = {
+        #             'departing_flight': departing_flight_data,
+        #             'return_flights': return_flight_data,
+        #             'departing_flight_index': index
+        #         }
+                
+        #         all_flight_data.append(combined_data)
+
+        #         # Navigate back to the initial departing flights list
+        #         page.goto(initial_url)
+        #         time.sleep(5)
+
+        #         # Re-select all departing flights without re-scraping
+        #         departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+        #     else:
+        #         print(f"Warning: Flight element at index {index} no longer exists on the page.")
+
+        # # Close browser after processing all flights
+        # browser.close()
+        # return all_flight_data
+
+
+
+        # # Scroll until no more flights are loaded
+        # last_height = page.evaluate('document.body.scrollHeight')
+        # while True:
+        #     page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+        #     time.sleep(2)
+        #     new_height = page.evaluate('document.body.scrollHeight')
+        #     if new_height == last_height:
+        #         break
+        #     last_height = new_height
+
+        # # Scrape all departing flights once
+        # parser_departing = LexborHTMLParser(page.content())
+        # all_departing_flights_data = scrape_google_flights(parser_departing)
+
+        # # Get all departing flight elements
+        # departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+
+        # all_flight_data = []
+
+        # # Scrape the initial URL to navigate back to this page later
+        # initial_url = page.url
+
+        # # Determine the key for departing flights in the scraped data
+        # departing_key = next(iter(all_departing_flights_data.keys()))
+
+        # # Determine the number of flights to actually scrape
+        # num_flights_to_scrape = min(len(departing_flights), len(all_departing_flights_data[departing_key]))
+
+        # print(f"Scraping {num_flights_to_scrape} flights...")
+
+        # for index in range(num_flights_to_scrape):
+        #     print(f"Scraping flight {index + 1} of {num_flights_to_scrape}")
+            
+        #     # Get the departing flight data for this index
+        #     departing_flight_data = all_departing_flights_data[departing_key][index]
+
+        #     # Check if the corresponding element still exists
+        #     if index < len(departing_flights):
+        #         # Click on the departing flight
+        #         departing_flights[index].click()
+        #         time.sleep(5)
+
+        #         # Scrape return flights after selecting a departing flight
+        #         parser_return = LexborHTMLParser(page.content())
+        #         return_flight_data = scrape_google_flights(parser_return)
+                
+        #         # Combine departing and return flight data
+        #         combined_data = {
+        #             'departing_flight': departing_flight_data,
+        #             'return_flights': return_flight_data,
+        #             'departing_flight_index': index
+        #         }
+                
+        #         all_flight_data.append(combined_data)
+
+        #         # Navigate back to the initial departing flights list
+        #         page.goto(initial_url)
+        #         time.sleep(5)
+
+        #         # Re-select all departing flights without re-scraping
+        #         departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+        #     else:
+        #         print(f"Warning: Flight element at index {index} no longer exists on the page.")
+
+        # # Close browser after processing all flights
+        # browser.close()
+        # return all_flight_data
+
+
+        # Function to load more results
+        def load_more_results():
+            more_results_button = page.query_selector('button[jsname="bZfYPd"]')
+            if more_results_button:
+                more_results_button.click()
+                time.sleep(2)
+                return True
+            return False
+
+        # Load all results
+        while load_more_results():
+            pass
+
+        # Scrape all departing flights once
+        parser_departing = LexborHTMLParser(page.content())
+        all_departing_flights_data = scrape_google_flights(parser_departing)
+
+        # Get all departing flight elements
+        departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+
+        print(f"Number of departing flight elements found: {len(departing_flights)}")
+        print(f"Number of flights in scraped data: {len(all_departing_flights_data[next(iter(all_departing_flights_data.keys()))])}")
+
+        all_flight_data = []
+
+        initial_url = page.url
+
+        # Determine the key for departing flights in the scraped data
+        departing_key = next(iter(all_departing_flights_data.keys()))
+
+        # Determine the number of flights to actually scrape
+        num_flights_to_scrape = min(len(departing_flights), len(all_departing_flights_data[departing_key]))
+
+        print(f"Scraping {num_flights_to_scrape} flights...")
+        
+
+        for index in range(num_flights_to_scrape):
+            print(f"Scraping flight {index + 1} of {num_flights_to_scrape}")
+            
+            # Get the departing flight data for this index
+            departing_flight_data = all_departing_flights_data[departing_key][index]
+
+            # Check if the corresponding element still exists
+            if index < len(departing_flights):
+                # Click on the departing flight
+                departing_flights[index].click()
+                time.sleep(5)  # Wait for the page to load
+
+                # Scrape return flights after selecting a departing flight
+                parser_return = LexborHTMLParser(page.content())
+                return_flight_data = scrape_google_flights(parser_return)
+                
+                # Combine departing and return flight data
+                combined_data = {
+                    'departing_flight': departing_flight_data,
+                    'return_flights': return_flight_data,
+                    'departing_flight_index': index
+                }
+                
+                all_flight_data.append(combined_data)
+
+                # Navigate back to the initial departing flights list
+                page.goto(initial_url)
+                time.sleep(5)  # Wait for the page to load
+
+                # Re-select all departing flights without re-scraping
+                departing_flights = page.query_selector_all('.yR1fYc[jsaction*="click:O1htCb"]')
+            else:
+                print(f"Warning: Flight element at index {index} no longer exists on the page.")
+
+                # Add a print statement to show how many flights were actually scraped
+                print(f"Scraped {len(all_flight_data)} flights in total.")
+
+        # Close browser after processing all flights
+        browser.close()
+        return all_flight_data
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+        return []  # Return an empty list if there's an error
 
 # Function to parse and scrape Google Flights data
 def scrape_google_flights(parser, parser_return=None):
@@ -1292,16 +1441,26 @@ def main():
     trip_type = 'Round Trip'
     seat_type = 'Economy'
 
+    # with sync_playwright() as playwright:
+    #     if trip_type.lower() == 'round trip':
+    #         all_flight_data = get_page(playwright, from_place, to_place, departure_date, return_date, trip_type, seat_type)
+    #         for index, flight_data in enumerate(all_flight_data):
+    #             print(f"\nDeparting Flight {index + 1}:")
+    #             print(json.dumps(flight_data, indent=4))
+    #     else:
+    #         parser, _ = get_page(playwright, from_place, to_place, departure_date, return_date, trip_type, seat_type)
+    #         data = scrape_google_flights(parser)
+    #         print(json.dumps(data, indent=4))
+
     with sync_playwright() as playwright:
-        if trip_type.lower() == 'round trip':
-            all_flight_data = get_page(playwright, from_place, to_place, departure_date, return_date, trip_type, seat_type)
-            for index, flight_data in enumerate(all_flight_data):
-                print(f"\nDeparting Flight {index + 1}:")
-                print(json.dumps(flight_data, indent=4))
-        else:
-            parser, _ = get_page(playwright, from_place, to_place, departure_date, return_date, trip_type, seat_type)
-            data = scrape_google_flights(parser)
-            print(json.dumps(data, indent=4))
+        all_flight_data = get_page(playwright, from_place, to_place, departure_date, return_date, trip_type, seat_type)
+        
+    if not all_flight_data:
+        print("No flight data was found.")
+    else:
+        for index, flight_data in enumerate(all_flight_data):
+            print(f"\nDeparting Flight {index + 1}:")
+            print(json.dumps(flight_data, indent=4))
 
 if __name__ == "__main__":
     main()
